@@ -1,8 +1,6 @@
 import numpy as np
 import cv2
 import huffman_encode_decode as huffman
-import struct
-import bitarray
 
 class BlockDifferenrial:
     block = None
@@ -107,7 +105,6 @@ def apply_block_differential_encoding(image_blocks):
     threashold = 127
     encoded_half = []
     for block in image_blocks:
-        # pixels = block[:, ::2].flatten() if block.shape[0] % 2 == 0 else block[:, 1::2].flatten()
         pixels = []
         for i in range(4):
             for j in range(8):
@@ -134,7 +131,7 @@ def apply_block_differential_decoding(encoded_blocks):
     original_blocks = []
     for block in encoded_blocks:
         if block.is_encoded == 1:
-            original_blocks.append([block.max - block.block])
+            original_blocks.append([block.max - x for x in block.block])
         else:
             original_blocks.append([block.block])
     return original_blocks
@@ -144,7 +141,7 @@ def reconstruct_image(transformed_half, encoded_half, shape):
     reconstructed_image = []
     for i in range(len(transformed_half)):
         first_half = np.array(transformed_half[i]).reshape(4, 4)
-        second_half = np.array(encoded_half[i][0]).reshape(4, 4)
+        second_half = np.array(encoded_half[i]).reshape(4, 4)
         reconstructed_block = np.zeros((4, 8))
         for j in range(4):
             for k in range(0,8,2):
@@ -194,16 +191,6 @@ def divide_image_into_blocks(image, block_shape=(4, 8)):
     return blocks
 
 def combine_blocks_into_image(blocks, image_shape):
-    """
-    Combines blocks into a single image.
-
-    Args:
-        blocks (numpy.ndarray): 3D array where each slice represents a block.
-        image_shape (tuple): Shape of the original image (rows, columns).
-
-    Returns:
-        numpy.ndarray: Combined image as a numpy array.
-    """
     # image_shape = (4, 40)
     blocks_array = np.array(blocks)
     num_blocks, num_blocks_rows, num_blocks_cols = blocks_array.shape
@@ -219,11 +206,14 @@ def combine_blocks_into_image(blocks, image_shape):
     # Initialize an empty array to store the combined image
     combined_image = np.zeros((combined_image_height, combined_image_width), dtype=np.uint8)
     # print('here')
+    # print(combined_image_height)
+    # print(combined_image_width)
     # print(block_count_row)
     # print(block_count_col)
     # print(block_count_row*block_count_col)
     # print(((block_count_row-1)*block_count_row)+block_count_col)
     # print(len(blocks_array))
+    # print(blocks_array)
     # Iterate over rows and columns to combine blocks into the image
     count = 0
     for i in range(block_count_col):
@@ -276,7 +266,7 @@ image = load_grayscale_image("Set12/01.png")
 
 image_shape = image.shape
 # print(image_shape)
-# image_shape = (4, 16)
+# image_shape = (8, 8)
 
 block_shape = (4, 8)
 
@@ -285,10 +275,16 @@ image_blocks = divide_image_into_blocks(image, block_shape)
 
 # print(image_blocks)
 
-# image_blocks = np.array([[[162, 162, 162, 162, 161, 157, 163, 163],
+# image_blocks = np.array([[[162, 0, 162, 250, 161, 157, 163, 163],
+#                          [162, 162, 162, 162, 161, 157, 163, 163],
+#                          [162, 162, 162, 162, 161, 157, 163, 163],
+#                          [162, 162, 162, 162, 161, 157, 163, 163]],
+#                          [[162, 162, 162, 162, 161, 157, 163, 163],
 #                          [162, 162, 162, 162, 161, 157, 163, 163],
 #                          [162, 162, 162, 162, 161, 157, 163, 163],
 #                          [162, 162, 162, 162, 161, 157, 163, 163]]])
+
+# print(image_blocks.shape)
 
 # transformed_first_half = apply_mapping_transform(image_blocks)
 # print(transformed_first_half)
@@ -302,9 +298,16 @@ print(len(transformed_first_half[0][0]))
 root, encoded_data  = huffman_encode(np.array(transformed_first_half).flatten())
 # print(len(encoded_data))
 file_name = 'mapping_transform.huf'
-huffman.write_to_file_mapping_transform(file_name, root, encoded_data)
+huffman.write_to_file(file_name, root, encoded_data)
 
-root, encoded_data = huffman.read_from_file_mapping_transform(file_name)
+root, data_from_file = huffman.read_from_file(file_name)
+if encoded_data == data_from_file:
+    print('You are correct till now')
+else:
+    print('abhi se hag diya!!!')
+    print(len(encoded_data))
+    print(len(data_from_file))
+encoded_data = data_from_file
 decoded_data = huffman_decode(root, encoded_data)
 print('huffman decode')
 print(len(decoded_data))
@@ -314,37 +317,73 @@ transformed_first_half = np.reshape(np.array(decoded_data), (count, 4, 8))
 
 encoded_second_half = apply_block_differential_encoding(image_blocks)
 print('encoded_second_half')
+print(len(encoded_second_half))
+print(len(encoded_second_half[0].block))
+print(encoded_second_half[0].block)
+print(encoded_second_half[0].max)
+print(encoded_second_half[0].is_encoded)
+print(encoded_second_half[0].bits_per_value)
 
 # data = bitarray.bitarray()
-data = b''
+data = ''
 for i in range(len(encoded_second_half)):
     block = encoded_second_half[i]
     # data.extend('1' if block.is_encoded else '0')
     data += ('1' if block.is_encoded else '0')
     if block.is_encoded:
-        data.extend(format(block.max, '08b'))
-        data.extend(format(block.bits_per_value, '03b'))
+        # data.extend(format(block.max, '08b'))
+        # data.extend(format(block.bits_per_value, '03b'))
+        data += format(block.max, '08b')
+        data += format(block.bits_per_value, '03b')
         format_string = '0' + str(block.bits_per_value) + 'b'
-        data.extend(''.join([format(j, format_string) for j in block.block]))
+        # data.extend(''.join([format(j, format_string) for j in block.block]))
+        data += ''.join([format(j, format_string) for j in block.block])
     else: 
-        data.extend(''.join([format(j, '08b') for j in block.block]))
+        # data.extend(''.join([format(j, '08b') for j in block.block]))
+        data += ''.join([format(j, '08b') for j in block.block])
 
-with open('file1.bin', 'wb') as f:
-    data.tofile(f)
+list = [int(i) for i in data]
 
-list = data.tolist()
-root, encoded_data = huffman_encode(np.array(list))
+root, encoded_data = huffman_encode(np.array(list).flatten())
 
 file_name = 'block_differential.huf'
-huffman.write_to_file_mapping_transform(file_name, root, encoded_data)
+huffman.write_to_file(file_name, root, encoded_data)
 
-# huffman.write_to_file_block_differential_encoded_data('block_differential.huf')
-# print(len(encoded_second_half))
-# print(len(encoded_second_half[0].block))
-# print(encoded_second_half[0].block)
-# print(encoded_second_half[0].max)
-# print(encoded_second_half[0].is_encoded)
-# print(encoded_second_half[0].bits_per_value)
+root, encoded_data = huffman.read_from_file(file_name)
+
+decoded_data = huffman_decode(root, encoded_data)
+
+encoded_second_half = []
+i = 0
+while i < len(decoded_data):
+    if int(decoded_data[i]) == 1: # block encoded
+        i+=1
+        max = int(''.join(map(str, decoded_data[i:i+8])), 2)
+        i+=8
+        bits_per_value = int(''.join(map(str, decoded_data[i:i+3])), 2)
+        if bits_per_value == 0:
+            print('bits_per_value == 0', i)
+        i+=3
+        block = [int(''.join(map(str, decoded_data[i+j:i+j+bits_per_value])), 2) for j in range(0,bits_per_value*16, bits_per_value)]
+        i+=(bits_per_value*16)
+        block_obj = BlockDifferenrial(True, block)
+        block_obj.max = max
+        block_obj.bits_per_value = bits_per_value
+        encoded_second_half.append(block_obj)
+    else: # block not encoded
+        i+=1
+        block = [int(''.join(map(str, decoded_data[i+j:i+j+8])), 2) for j in range(0,8*16, 8)]
+        i+=(8*16)
+        block_obj = BlockDifferenrial(False, block)
+        encoded_second_half.append(block_obj)
+
+print('after huffman')
+print(len(encoded_second_half))
+print(len(encoded_second_half[0].block))
+print(encoded_second_half[0].block)
+print(encoded_second_half[0].max)
+print(encoded_second_half[0].is_encoded)
+print(encoded_second_half[0].bits_per_value)
 
 original_first_half = apply_reverse_mapping_transform(transformed_first_half)
 print('original_first_half')
@@ -366,8 +405,8 @@ print('error', error)
 
 original_second_half = apply_block_differential_decoding(encoded_second_half)
 print('original_second_half')
-# print(len(original_second_half))
-# print(len(original_second_half[0]))
+print(len(original_second_half))
+print(len(original_second_half[0]))
 # print(len(original_second_half[0][0]))
 # print(original_second_half)
 

@@ -65,8 +65,15 @@ def huffman_decode(encoded_data, root):
             current_node = root
     return decoded_data
 
-def write_to_file_mapping_transform(filename, root, encoded_data):
+# def write_to_file(filename, root, encoded_data):
+#     with open(filename, 'wb') as f:
+#         write_tree(f, root)
+#         write_encoded_data(f, encoded_data)
+
+def write_to_file(filename, root, encoded_data):
     with open(filename, 'wb') as f:
+        # Write the length of the encoded data
+        f.write(struct.pack('I', len(encoded_data)))
         write_tree(f, root)
         write_encoded_data(f, encoded_data)
 
@@ -86,10 +93,18 @@ def write_encoded_data(f, encoded_data):
         f.write(struct.pack('B', int(byte, 2)))
 
 # Read Huffman tree and encoded data from a binary file
-def read_from_file_mapping_transform(filename):
+# def read_from_file(filename):
+#     with open(filename, 'rb') as f:
+#         root = read_tree(f)
+#         encoded_data = read_encoded_data(f)
+#     return root, encoded_data
+
+def read_from_file(filename):
     with open(filename, 'rb') as f:
+        # Read the length of the encoded data
+        encoded_data_length = struct.unpack('I', f.read(4))[0]
         root = read_tree(f)
-        encoded_data = read_encoded_data(f)
+        encoded_data = read_encoded_data(f, encoded_data_length)
     return root, encoded_data
 
 def read_tree(f):
@@ -101,13 +116,26 @@ def read_tree(f):
         right = read_tree(f)
         return Node(None, 0, left, right)
 
-def read_encoded_data(f):
+# def read_encoded_data(f):
+#     encoded_data = ''
+#     byte = f.read(1)
+#     while byte:
+#         encoded_data += f'{byte[0]:08b}'
+#         byte = f.read(1)
+#     return encoded_data
+
+def read_encoded_data(f, encoded_data_length):
     encoded_data = ''
     byte = f.read(1)
     while byte:
         encoded_data += f'{byte[0]:08b}'
         byte = f.read(1)
-    return encoded_data
+    # Use the length of the encoded data to remove any padding zeros
+    last_byte_count = encoded_data_length % 8
+    if last_byte_count == 0:
+        return encoded_data
+    last_byte_start = int(encoded_data_length / 8)
+    return encoded_data[:last_byte_start*8] + encoded_data[-last_byte_count:]
 
 def write_to_file_block_differential_encoded_data(filename, data):
     with open(filename, 'wb') as f:
