@@ -1,8 +1,9 @@
 import numpy as np
 import utils
 import huffman_encode_decode as huffman
+import os
 
-BLOCK_SHAPE = (4, 4)
+BLOCK_SHAPE = (4, 8)
 
 class BlockDifferenrial:
     block = None
@@ -101,33 +102,48 @@ def print_error(image_blocks, reconstructed_image_blocks):
         error += np.sqrt(np.sum(np.square(block - reconstructed_image_blocks[k])))
     print('error', error)
 
+def get_file_size(relative_file_path):
+    absolute_file_path = os.path.join(os.getcwd(), relative_file_path)
+    return os.path.getsize(absolute_file_path)
+
 if __name__ == '__main__':
-    image = utils.load_grayscale_image("Set12/10.png")
-    image_shape = image.shape
-    
-    image_blocks = utils.divide_image_into_blocks(image, BLOCK_SHAPE)
-    print('divided to blocks')
-    encoded_blocks = apply_block_differential_encoding(image_blocks)
-    print('encoded blocks')
-    bit_stream_array = convert_encoded_block_to_bitstream(encoded_blocks)
-    print('converted to bitstream')
-    root, encoded_data = utils.huffman_encode(bit_stream_array)
-    print('huffman encoded')
+    FILES = [f"{i:02}.png" for i in range(1, 13)]
+    for file in FILES:
+        image_path = f"Set12/{file}"
+        image = utils.load_grayscale_image(image_path)
+        image_shape = image.shape
+        
+        image_blocks = utils.divide_image_into_blocks(image, BLOCK_SHAPE)
+        # print('divided to blocks')
+        encoded_blocks = apply_block_differential_encoding(image_blocks)
+        # print('encoded blocks')
+        bit_stream_array = convert_encoded_block_to_bitstream(encoded_blocks)
+        # print('converted to bitstream')
+        root, encoded_data = utils.huffman_encode(bit_stream_array)
+        # print('huffman encoded')
 
-    file_name = 'block-differential.huf'
-    huffman.write_to_file(file_name, root, encoded_data)
-    print('wrote to file')
+        file_name = 'block-differential.huf'
+        huffman.write_to_file(file_name, root, encoded_data)
+        # print('wrote to file')
 
-    root, encoded_data = huffman.read_from_file(file_name)
-    print('reading file completed')
-    decoded_bitstream = utils.huffman_decode(root, encoded_data)
-    print('decoded huffman string')
-    encoded_blocks = bitstream_to_encoded_blocks(decoded_bitstream)
-    print('converted bitstream to blocks')
-    reconstructed_image_blocks = apply_block_differential_decoding(encoded_blocks)
-    print('block differential decoding completed')
+        root, encoded_data = huffman.read_from_file(file_name)
+        # print('reading file completed')
+        decoded_bitstream = utils.huffman_decode(root, encoded_data)
+        # print('decoded huffman string')
+        encoded_blocks = bitstream_to_encoded_blocks(decoded_bitstream)
+        # print('converted bitstream to blocks')
+        reconstructed_image_blocks = apply_block_differential_decoding(encoded_blocks)
+        # print('block differential decoding completed')
 
-    print_error(image_blocks, reconstructed_image_blocks)
+        print(f'For {file}')
+        print_error(image_blocks, reconstructed_image_blocks)
 
-    reconstructed_image = utils.combine_blocks_into_image(reshape_to_original_block_size(reconstructed_image_blocks), image_shape)
-    utils.imshow(reconstructed_image)
+        image_size = get_file_size(image_path)
+        # print('image_size', image_size)
+        compressed_file_size = get_file_size(file_name)
+        # print('compressed_file_size', compressed_file_size)
+
+        if compressed_file_size < image_size:
+            print('SUCCESS')
+    # reconstructed_image = utils.combine_blocks_into_image(reshape_to_original_block_size(reconstructed_image_blocks), image_shape)
+    # utils.imshow(reconstructed_image)
