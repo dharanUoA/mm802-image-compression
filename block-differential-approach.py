@@ -2,7 +2,7 @@ import numpy as np
 import utils
 import huffman_encode_decode as huffman
 
-BLOCK_SHAPE = (4, 8)
+BLOCK_SHAPE = (4, 4)
 
 class BlockDifferenrial:
     block = None
@@ -17,11 +17,6 @@ def apply_block_differential_encoding(image_blocks):
     threashold = 127
     encoded_half = []
     for block in image_blocks:
-        # pixels = []
-        # for i in range(4):
-        #     for j in range(8):
-        #         if (i+j) % 2 != 0:
-        #             pixels.append(block[i, j])
         pixels = np.array(block).flatten()
         max = np.max(pixels)
         min = np.min(pixels)
@@ -50,33 +45,37 @@ def apply_block_differential_decoding(encoded_blocks):
     return original_blocks
 
 def convert_encoded_block_to_bitstream(encoded_blocks):
-    data = ''
-    for i in range(len(encoded_blocks)):
-        block = encoded_blocks[i]
-        data += ('1' if block.is_encoded else '0')
+    bitstream = []
+    for block in encoded_blocks:
+        bitstream.append(1 if block.is_encoded else 0)
         if block.is_encoded:
-            data += format(block.max, '08b')
-            data += format(block.bits_per_value, '03b')
-            format_string = '0' + str(block.bits_per_value) + 'b'
-            data += ''.join([format(j, format_string) for j in block.block])
+            bitstream.extend([int(b) for b in format(block.max, '08b')])
+            bitstream.extend([int(b) for b in format(block.bits_per_value, '03b')])
+            if block.bits_per_value != 0:
+                format_string = '0' + str(block.bits_per_value) + 'b'
+                bitstream.extend([int(b) for j in block.block for b in format(j, format_string)])
         else: 
-            data += ''.join([format(j, '08b') for j in block.block])
+            bitstream.extend([int(b) for j in block.block for b in format(j, '08b')])
 
-    return [int(i) for i in data]
+    return bitstream
 
 def bitstream_to_encoded_blocks(bitstream):
     encoded_blocks = []
     i = 0
     ITEMS_IN_BLOCK = BLOCK_SHAPE[0] * BLOCK_SHAPE[1]
     while i < len(bitstream):
-        if int(bitstream[i]) == 1: # block encoded
+        if bitstream[i] == 1: # block encoded
             i+=1
             max = int(''.join(map(str, bitstream[i:i+8])), 2)
             i+=8
             bits_per_value = int(''.join(map(str, bitstream[i:i+3])), 2)
             i+=3
-            block = [int(''.join(map(str, bitstream[i+j:i+j+bits_per_value])), 2) for j in range(0,bits_per_value*ITEMS_IN_BLOCK, bits_per_value)]
-            i+=(bits_per_value*ITEMS_IN_BLOCK)
+            block = []
+            if bits_per_value == 0:
+                block = [0 for i in range(ITEMS_IN_BLOCK)]
+            else:
+                block = [int(''.join(map(str, bitstream[i+j:i+j+bits_per_value])), 2) for j in range(0,bits_per_value*ITEMS_IN_BLOCK, bits_per_value)]
+                i+=(bits_per_value*ITEMS_IN_BLOCK)
             block_obj = BlockDifferenrial(True, block)
             block_obj.max = max
             block_obj.bits_per_value = bits_per_value
@@ -103,22 +102,30 @@ def print_error(image_blocks, reconstructed_image_blocks):
     print('error', error)
 
 if __name__ == '__main__':
-    image = utils.load_grayscale_image("Set12/02.png")
+    image = utils.load_grayscale_image("Set12/10.png")
     image_shape = image.shape
     
     image_blocks = utils.divide_image_into_blocks(image, BLOCK_SHAPE)
-
+    print('divided to blocks')
     encoded_blocks = apply_block_differential_encoding(image_blocks)
+    print('encoded blocks')
     bit_stream_array = convert_encoded_block_to_bitstream(encoded_blocks)
+    print('converted to bitstream')
     root, encoded_data = utils.huffman_encode(bit_stream_array)
+    print('huffman encoded')
 
-    file_name = 'block_differential.huf'
+    file_name = 'block-differential.huf'
     huffman.write_to_file(file_name, root, encoded_data)
+    print('wrote to file')
 
     root, encoded_data = huffman.read_from_file(file_name)
+    print('reading file completed')
     decoded_bitstream = utils.huffman_decode(root, encoded_data)
+    print('decoded huffman string')
     encoded_blocks = bitstream_to_encoded_blocks(decoded_bitstream)
+    print('converted bitstream to blocks')
     reconstructed_image_blocks = apply_block_differential_decoding(encoded_blocks)
+    print('block differential decoding completed')
 
     print_error(image_blocks, reconstructed_image_blocks)
 

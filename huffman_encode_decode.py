@@ -76,9 +76,9 @@ def write_tree(f, node):
             write_tree(f, node.right)
 
 def write_encoded_data(f, encoded_data):
-    encoded_bytes = [encoded_data[i:i+8] for i in range(0, len(encoded_data), 8)]
-    for byte in encoded_bytes:
-        f.write(struct.pack('B', int(byte, 2)))
+    for i in range(0, len(encoded_data), 8):
+        byte = encoded_data[i:i+8]
+        f.write(bytes([int(byte, 2)]))
 
 def read_from_file(filename):
     with open(filename, 'rb') as f:
