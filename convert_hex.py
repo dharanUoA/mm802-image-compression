@@ -19,8 +19,7 @@ def visualize_image(image, name):
     plt.title(name)
     plt.show()
 
-def scale_Image(scaling_factor):
-    global image
+def scale_Image(image, scaling_factor):
     m,n = image.shape
     scaled_image = np.empty((scaling_factor*m, scaling_factor*n))
 
@@ -29,7 +28,6 @@ def scale_Image(scaling_factor):
             pixel_val = image[i,j]
             scaled_image[scaling_factor*i:scaling_factor*(i+1), scaling_factor*j:scaling_factor*(j+1)] = pixel_val
     return scaled_image
-
 
 def get_square_strut():
     global image
@@ -71,10 +69,77 @@ def calc_avg(child_sq_mat):
         total_sum = np.sum(image)
     return total_sum
     
+def method(image, block_shape=(9, 8)):
+    block_rows, block_cols = block_shape
+    image = scale_Image(image, 7)
+    rows, cols = image.shape
+
+    i, j = 0, 0
+    isEven = True
+    final_image = []
+    while i+9 < rows:
+        row_block = []
+        while j < cols:
+            total_sum = 0
+            count = 0
+            if isEven:
+                last_index = cols if j+8 > cols else j
+                total_sum += np.sum(image[[i, i+8], last_index+3:last_index+5])
+                total_sum += np.sum(image[[i+1, i+7], last_index+1:last_index+6])
+                total_sum += np.sum(image[i+2:i+7, last_index:last_index+8])
+                count = 56
+                j += block_cols
+            else:
+                if j == 0:
+                    last_index = cols if j+4 > cols else j
+                    total_sum += np.sum(image[[i, i+8], last_index])
+                    total_sum += np.sum(image[[i+1, i+7], last_index:last_index+3])
+                    total_sum += np.sum(image[i+2:i+7, last_index:last_index+4])
+                    j += int(block_cols / 2)
+                    count = 28
+                else:
+                    last_index = cols if j+8 > cols else j
+                    total_sum += np.sum(image[[i, i+8], last_index+3:last_index+5])
+                    total_sum += np.sum(image[[i+1, i+7], last_index+1:last_index+6])
+                    total_sum += np.sum(image[i+2:i+7, last_index:last_index+8])
+                    j += block_cols
+                    count = 56
+            row_block.append(int(total_sum/count))
+        isEven = not isEven
+        i += (block_rows - 2)
+        j = int(0)
+        final_image.append(row_block)
+    return final_image
+    
+
 if __name__=='__main__':
-    loadImage()
-    scaled_img = scale_Image(7)
+    image = np.array(utils.load_grayscale_image('Set12/01.png'))
+    print(image.shape)
+    # image_blocks = np.array([[162, 162, 162, 250, 161, 157, 163, 163],
+    #                         [162, 162, 162, 162, 161, 157, 163, 163],
+    #                         [162, 162, 162, 162, 161, 157, 163, 163],
+    #                         [162, 162, 162, 162, 161, 157, 163, 163],
+    #                         [162, 162, 162, 162, 161, 157, 163, 163],
+    #                         [162, 162, 162, 162, 161, 157, 163, 163],
+    #                         [162, 162, 162, 162, 161, 157, 163, 163],
+    #                         [162, 162, 162, 162, 161, 157, 163, 163],
+    #                         [162, 162, 162, 162, 161, 157, 163, 163]])
+    
+    final_image = method(image)
+    # print(final_image)
+    
+    final_final_image = []
+    for i in range(len(final_image)):
+        block = []
+        if i % 2 != 0:
+            block = final_image[i][0:len(final_image[i])-1]
+        else:
+            block = final_image[i]
+        final_final_image.append(block)
+
+    # print(final_final_image)
     # print(image.shape)
     # print(scaled_img.shape)
-    # visualize_image(image, "original")
+    visualize_image(final_final_image, "original")
+    print(np.array(final_final_image).shape)
     # visualize_image(scaled_img, "sclaed")
