@@ -2,8 +2,10 @@ import numpy as np
 import utils
 import huffman_encode_decode as huffman
 import os
+import imagecodecs
+import csv
 
-BLOCK_SHAPE = (4, 8)
+BLOCK_SHAPE = (8, 8)
 
 class BlockDifferenrial:
     block = None
@@ -106,10 +108,19 @@ def get_file_size(relative_file_path):
     absolute_file_path = os.path.join(os.getcwd(), relative_file_path)
     return os.path.getsize(absolute_file_path)
 
+def write_jpeg_ls(filename, bytes):
+    with open(filename, 'wb') as f:
+        f.write(bytes)
+
 if __name__ == '__main__':
-    FILES = [f"{i:02}.png" for i in range(1, 13)]
+    # FILES = [f"{i:02}.png" for i in range(1, 13)]
+    # FILES = [f"{i}.jpg" for i in range(0, 7129)]
+    FILES = [f"{i}.jpg" for i in range(0, 30)]
+    success_count = 0
+    data = [["Name","Size Using Noval Approach", "Size Using JPEG-LS"]]
     for file in FILES:
-        image_path = f"Set12/{file}"
+        # image_path = f"Set12/{file}"
+        image_path = f"gray/{file}"
         image = utils.load_grayscale_image(image_path)
         image_shape = image.shape
         
@@ -122,11 +133,12 @@ if __name__ == '__main__':
         root, encoded_data = utils.huffman_encode(bit_stream_array)
         # print('huffman encoded')
 
-        file_name = 'block-differential.huf'
+        file_name = 'block-differential.bin'
         huffman.write_to_file(file_name, root, encoded_data)
         # print('wrote to file')
 
         root, encoded_data = huffman.read_from_file(file_name)
+        
         # print('reading file completed')
         decoded_bitstream = utils.huffman_decode(root, encoded_data)
         # print('decoded huffman string')
@@ -135,15 +147,31 @@ if __name__ == '__main__':
         reconstructed_image_blocks = apply_block_differential_decoding(encoded_blocks)
         # print('block differential decoding completed')
 
-        print(f'For {file}')
-        print_error(image_blocks, reconstructed_image_blocks)
+        # print(f'For {file}')
+        # print_error(image_blocks, reconstructed_image_blocks)
 
-        image_size = get_file_size(image_path)
+        # image_size = get_file_size(image_path)
         # print('image_size', image_size)
         compressed_file_size = get_file_size(file_name)
         # print('compressed_file_size', compressed_file_size)
 
+        compressed_data = imagecodecs.jpegls_encode(image)
+        jpeg_ls_filename = 'jpeg-ls.bin'
+        write_jpeg_ls(jpeg_ls_filename, compressed_data)
+
+        image_size = get_file_size(jpeg_ls_filename)
+        # Decompress the image
+        # decompressed_data = imagecodecs.jpegls_decode(compressed_data)
+
+        data.append([file, compressed_file_size, image_size])
         if compressed_file_size < image_size:
-            print('SUCCESS')
+            # print('SUCCESS')
+            success_count += 1
+            print(f'FOR {file} - SUCCESS COUNT - {success_count}')
+        
+    # with open("results.csv", 'w', newline='') as csvfile:
+    #     csvwriter = csv.writer(csvfile)
+    #     csvwriter.writerows(data)
+
     # reconstructed_image = utils.combine_blocks_into_image(reshape_to_original_block_size(reconstructed_image_blocks), image_shape)
     # utils.imshow(reconstructed_image)

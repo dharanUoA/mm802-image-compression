@@ -109,7 +109,6 @@ def read_encoded_data(f, encoded_data_length):
     last_byte_start = int(encoded_data_length / 8)
     return encoded_data[:last_byte_start*8] + encoded_data[-last_byte_count:]
 
-
 if __name__=='__main__':
     array = [1, 2, 1, 3, 2, 1, 1, 4]
     frequencies = calculate_frequency(array)
