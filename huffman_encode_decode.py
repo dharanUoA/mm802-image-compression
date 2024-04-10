@@ -59,10 +59,16 @@ def huffman_decode(encoded_data, root):
             current_node = root
     return decoded_data
 
-def write_to_file(filename, root, encoded_data):
+# def write_to_file(filename, root, encoded_data):
+#     with open(filename, 'wb') as f:
+#         f.write(struct.pack('I', len(encoded_data)))
+#         write_tree(f, root)
+#         write_encoded_data(f, encoded_data)
+
+def write_to_file(filename, encoded_data):
     with open(filename, 'wb') as f:
         f.write(struct.pack('I', len(encoded_data)))
-        write_tree(f, root)
+        # write_tree(f, root)
         write_encoded_data(f, encoded_data)
 
 def write_tree(f, node):
@@ -80,12 +86,19 @@ def write_encoded_data(f, encoded_data):
         byte = encoded_data[i:i+8]
         f.write(bytes([int(byte, 2)]))
 
+# def read_from_file(filename):
+#     with open(filename, 'rb') as f:
+#         encoded_data_length = struct.unpack('I', f.read(4))[0]
+#         root = read_tree(f)
+#         encoded_data = read_encoded_data(f, encoded_data_length)
+#     return root, encoded_data
+
 def read_from_file(filename):
     with open(filename, 'rb') as f:
         encoded_data_length = struct.unpack('I', f.read(4))[0]
-        root = read_tree(f)
+        # root = read_tree(f)
         encoded_data = read_encoded_data(f, encoded_data_length)
-    return root, encoded_data
+    return encoded_data
 
 def read_tree(f):
     bit = f.read(1)

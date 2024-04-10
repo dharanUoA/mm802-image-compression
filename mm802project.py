@@ -260,7 +260,7 @@ def huffman_encode(array):
 def huffman_decode(root, encoded_data):
     return huffman.huffman_decode(encoded_data, root)
 
-image = load_grayscale_image("Set12/01.png")
+image = load_grayscale_image("Set12/12.png")
 # imshow(image)
 # print(image[0])
 
