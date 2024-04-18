@@ -4,6 +4,8 @@ import utilities.huffman_encode_decode as huffman
 import os
 import imagecodecs
 import csv
+import utilities.convert_hex as hex
+import cv2
 
 BLOCK_SHAPE = (8, 8)
 
@@ -112,16 +114,47 @@ def write_jpeg_ls(filename, bytes):
     with open(filename, 'wb') as f:
         f.write(bytes)
 
+def image_entropy(image):
+    # Convert the image to grayscale if it's a color image
+    # Compute histogram of pixel intensity values
+    hist = cv2.calcHist([image], [0], None, [256], [0,256])
+    
+    # Normalize histogram to obtain probabilities
+    hist_norm = hist / np.sum(hist)
+    
+    # Calculate entropy
+    entropy = -np.sum(hist_norm * np.log2(hist_norm + 1e-10))  # Add a small value to prevent log(0)
+    
+    return entropy
+
+def calculate_psnr(original_img, compressed_img):
+    max_pixel = 255.0  # Assuming pixel values range from 0 to 255
+    mse = np.mean((original_img - compressed_img) ** 2)
+    if mse == 0:
+        return float('inf')
+    psnr = 10 * np.log10((max_pixel ** 2) / mse)
+    return psnr
+
+
 if __name__ == '__main__':
     # FILES = [f"{i:02}.png" for i in range(1, 13)]
-    # FILES = [f"{i}.jpg" for i in range(0, 7129)]
-    # data = [["Name","Size Using Noval Approach", "Size Using JPEG-LS"]]
+    # FILES = [f"{i}.jpg" for i in range(0, 3)]
+    # data = [["Name","Size Using Noval Approach", "Size Using JPEG-LS", "MSE", "Image Entropy", "Compressed Image Entropy", "PSNR"]]
     # for file in FILES:
     file = '01.png'
     image_path = f"image-datasets/Set12/{file}"
     image = utils.load_grayscale_image(image_path)
+    original_image = utils.load_grayscale_image(image_path)
+
+    entropy1 = image_entropy(image)
+
+    transformed_image = hex.hexagonal_lattice_transform(image)
+
+    image = np.array(transformed_image, dtype='uint8')
+    entropy2 = image_entropy(image)
     image_shape = image.shape
     
+
     image_blocks = utils.divide_image_into_blocks(image, BLOCK_SHAPE)
     encoded_blocks = apply_block_differential_encoding(image_blocks)
     bit_stream_array = convert_encoded_block_to_bitstream(encoded_blocks)
@@ -137,12 +170,15 @@ if __name__ == '__main__':
     encoded_blocks = bitstream_to_encoded_blocks(encoded_bit_stream)
 
     reconstructed_image_blocks = apply_block_differential_decoding(encoded_blocks)
-    # compressed_file_size = get_file_size(image_path)
+
+    reconstructed_image = utils.combine_blocks_into_image(reshape_to_original_block_size(reconstructed_image_blocks), image_shape)
+    utils.imshow(reconstructed_image)
+    
+    # hex_error = hex.get_error(original_image, reconstructed_image)
+    # compressed_file_size = get_file_size(file_name)
     # compressed_data = imagecodecs.jpegls_encode(image)
     # jpeg_ls_filename = 'jpeg-ls.bin'
     # write_jpeg_ls(jpeg_ls_filename, compressed_data)
     # image_size = get_file_size(jpeg_ls_filename)
-    # data.append([file, compressed_file_size, image_size])
-        
-    reconstructed_image = utils.combine_blocks_into_image(reshape_to_original_block_size(reconstructed_image_blocks), image_shape)
-    utils.imshow(reconstructed_image)
+    # psnr = calculate_psnr(image, reconstructed_image)
+    # data.append([file, compressed_file_size, image_size, hex_error, entropy1, entropy2, psnr])
