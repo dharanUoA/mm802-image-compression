@@ -17,13 +17,9 @@ This project forms a crucial component of the university curriculum, serving as 
 
 To setup the poject in your local machine follow these steps:
 
-1. Clone the repository:
+Navigate to the project directory:
 
-   `git clone` [Repo URL](https://github.com/dharanUoA/mm802-image-compression.git)
-
-2. Navigate to the project directory:
-
-   `cd [project directory]`
+`cd [project directory]`
 
 To install the necessary dependencies for this project, follow these steps:
 
